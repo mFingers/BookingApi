@@ -48,8 +48,8 @@
     <Compile Include="Messages.fs" />
     <Compile Include="DomainModel.fs" />
     <Compile Include="Renditions.fs" />
-    <Compile Include="Infrastructure.fs" />
     <Compile Include="Controllers.fs" />
+    <Compile Include="Infrastructure.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
