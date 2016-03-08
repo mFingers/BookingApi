@@ -10,4 +10,10 @@ let ConfigureRoutes (config:HttpConfiguration) =
         "{controller}/{id}",
         { Controller = "Home"; Id = RouteParameter.Optional }) |> ignore
 
-let Configure = ConfigureRoutes
+let ConfigureFormatting (config:HttpConfiguration) =
+    config.Formatters.JsonFormatter.SerializerSettings.ContractResolver <-
+        Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+
+let Configure config =
+    ConfigureRoutes config
+    ConfigureFormatting config
