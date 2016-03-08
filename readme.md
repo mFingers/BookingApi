@@ -34,3 +34,10 @@ From "A Functional Architecure with F#" course.
 - Change Target Framework to 4.6.1
 - Change build output directory to just "bin"
 - Clear the XML Documentation file checkbox
+
+## Separate API concerns from hosting concerns
+- Create F# class library
+- Install Microsoft.AspNet.WebApi.WebHost
+- Add reference to System.Web
+- Move infrastructure code that should be owned by the API out of the host
+- Create a controller to prove it works
