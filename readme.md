@@ -50,3 +50,9 @@ From "A Functional Architecure with F#" course.
 - Install [ReactiveX](http://reactivex.io/) `nuget Rx-Main`
 - Implement IObservable in the controller
 - Turn the http post into the publisher:  People from the web site will be asking for reservations.  The post message will receive those requests, then publish their messages to the application.
+
+## Create business logic around making a reservation
+- Create a Reservation module
+    - operations to work on a list of reservations
+
+## 

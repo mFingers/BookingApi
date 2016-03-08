@@ -2,7 +2,7 @@
 open System
 
 [<CLIMutable>]
-type MakeReservation ={
+type MakeReservation = {
     Date:DateTime
     Name:string
     Email:string
@@ -21,3 +21,10 @@ module Envelope =
 
     let EnvelopWithDefaults item =
         Envelop (Guid.NewGuid()) (DateTimeOffset.Now) item
+
+[<CLIMutable>]
+type Reservation = {
+    Date:DateTime
+    Name:string
+    Email:string
+    Quantity:int}
