@@ -55,4 +55,7 @@ From "A Functional Architecure with F#" course.
 - Create a Reservation module
     - operations to work on a list of reservations
 
-## 
+## Subscribe business logic to reservations controller
+1. Create a mailbox processor (agent) to handle the incoming reservations
+1. Hook into WebApi where it creates controllers, and subscribe to the controller, using the agent
+

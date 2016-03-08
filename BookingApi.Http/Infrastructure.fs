@@ -1,6 +1,7 @@
 ﻿module BookingApi.Http.Infrastructure
 
 open System
+open System.Net.Http
 open System.Web.Http
 open System.Web.Http.Dispatcher
 open Controllers
@@ -34,6 +35,9 @@ type CompositionRoot() =
                 new HomeController() :> IHttpController
             elif controllerType = typeof<ReservationsController> then
                 let c = new ReservationsController()
+                let sub = c.Subscribe agent.Post
+                request.RegisterForDispose sub
+
                 c :> IHttpController
             else
                 raise
