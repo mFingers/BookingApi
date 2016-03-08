@@ -41,3 +41,12 @@ From "A Functional Architecure with F#" course.
 - Add reference to System.Web
 - Move infrastructure code that should be owned by the API out of the host
 - Create a controller to prove it works
+- Setup JSON serialization defaults
+
+## Setup the reservation controller as a publisher of messages
+- Create the types for the messages
+    - The message content
+    - An envelope for the message
+- Install [ReactiveX](http://reactivex.io/) `nuget Rx-Main`
+- Implement IObservable in the controller
+- Turn the http post into the publisher:  People from the web site will be asking for reservations.  The post message will receive those requests, then publish their messages to the application.
