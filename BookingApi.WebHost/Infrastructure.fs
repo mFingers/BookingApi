@@ -19,15 +19,18 @@ type Global() =
         let seatingCapacity = 10
         let reservations = ConcurrentBag<Envelope<Reservation>>()
 
+        let reservationSubject = new Subjects.Subject<Envelope<Reservation>>()
+        reservationSubject.Subscribe reservations.Add |> ignore
+
         let agent = new Agent<Envelope<MakeReservation>>(fun inbox ->
             let rec loop () =
-                async {
+                async { 
                     let! cmd = inbox.Receive()
                     let rs = reservations |> ToReservations
                     let handle = Handle seatingCapacity rs
                     let newReservations = handle cmd
                     match newReservations with
-                    | Some (r) -> reservations.Add r
+                    | Some (r) -> reservationSubject.OnNext r
                     | None     -> ()
                     return! loop()
                 }
