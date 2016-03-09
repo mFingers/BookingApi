@@ -66,3 +66,7 @@ From "A Functional Architecure with F#" course.
 1. Change CompositionRoot to accept IReservation
 1. Remove ConcurrentBag from agent
 --> Result: agent only depends on IObservable<'T>
+
+## Publish success/failure
+1. Create a type for the notification
+1. notificationSubject - what's that about?  Need Rx help
