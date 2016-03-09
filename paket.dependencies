@@ -3,3 +3,4 @@ source https://nuget.org/api/v2
 nuget FAKE
 nuget Microsoft.AspNet.WebApi.WebHost
 nuget Rx-Main
+nuget FSharp.Control.Reactive

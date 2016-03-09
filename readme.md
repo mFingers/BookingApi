@@ -59,3 +59,10 @@ From "A Functional Architecure with F#" course.
 1. Create a mailbox processor (agent) to handle the incoming reservations
 1. Hook into WebApi where it creates controllers, and subscribe to the controller, using the agent
 
+## Decouple the agent from the web API, it should be a host concern
+1. Install FSharp Reactive library
+
+## Decouple the backing store from the agent
+1. Change CompositionRoot to accept IReservation
+1. Remove ConcurrentBag from agent
+--> Result: agent only depends on IObservable<'T>
