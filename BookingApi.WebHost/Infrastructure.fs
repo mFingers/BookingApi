@@ -6,6 +6,7 @@ open BookingApi.Http.Infrastructure
 open System.Collections.Concurrent
 open BookingApi.Http
 open BookingApi.Http.Reservations
+open BookingApi.Http.Notifications
 open System.Reactive
 open FSharp.Control.Reactive
 open FSharp.Control.Reactive.Observable
@@ -62,5 +63,6 @@ type Global() =
 
         Configure
             (reservations |> ToReservations)
+            (notifications |> ToNotifications)
             (Observer.Create agent.Post)
             GlobalConfiguration.Configuration

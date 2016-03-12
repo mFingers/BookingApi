@@ -9,8 +9,9 @@ open System.Web.Http
 open System.Web.Http.Dispatcher
 open Controllers
 open Reservations
+open Notifications
 
-type CompositionRoot (reservations:IReservations, reservationRequestObserver) =
+type CompositionRoot (reservations:IReservations, notifications:INotifications, reservationRequestObserver) =
     interface IHttpControllerActivator with
         member this.Create(request, controllerDescriptor, controllerType) =
             if controllerType = typeof<HomeController> then
@@ -23,7 +24,7 @@ type CompositionRoot (reservations:IReservations, reservationRequestObserver) =
 
                 c :> IHttpController
             elif controllerType = typeof<NotificationsController> then
-                new NotificationsController([] |> Notifications.ToNotifications) :> IHttpController
+                new NotificationsController(notifications) :> IHttpController
             else
                 raise
                 <| ArgumentException(
@@ -31,10 +32,10 @@ type CompositionRoot (reservations:IReservations, reservationRequestObserver) =
 
 type HttpRouteDefaults = { Controller:string; Id:obj }
 
-let ConfigureServices reservations reservationRequestObserver (config:HttpConfiguration) =
+let ConfigureServices reservations notifications reservationRequestObserver (config:HttpConfiguration) =
     config.Services.Replace(
         typeof<IHttpControllerActivator>,
-        CompositionRoot (reservations, reservationRequestObserver))
+        CompositionRoot (reservations, notifications, reservationRequestObserver))
 
 let ConfigureRoutes (config:HttpConfiguration) =
     config.Routes.MapHttpRoute(
@@ -46,7 +47,7 @@ let ConfigureFormatting (config:HttpConfiguration) =
     config.Formatters.JsonFormatter.SerializerSettings.ContractResolver <-
         Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
 
-let Configure reservations reservationRequestObserver config =
+let Configure reservations notifications reservationRequestObserver config =
     ConfigureRoutes config
-    ConfigureServices reservations reservationRequestObserver config
+    ConfigureServices reservations notifications reservationRequestObserver config
     ConfigureFormatting config
