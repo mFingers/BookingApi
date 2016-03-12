@@ -66,3 +66,46 @@ type NotificationsController (notifications:Notifications.INotifications) =
         this.Request.CreateResponse(HttpStatusCode.OK, {Notifications = matches })
 
     member this.Notifications = notifications
+
+
+type AvailabilityController(seatingCapacity:int) =
+    inherit ApiController()
+
+    member this.Get year =
+        let openings =
+            Dates.In (Year year)
+            |> Seq.map (fun d -> 
+                {
+                    Date = d.ToString "yyyy.MM.dd"
+                    Seats = seatingCapacity })
+            |> Seq.toArray
+
+        this.Request.CreateResponse(
+            HttpStatusCode.OK,
+            { Openings = openings })
+
+    member this.Get (year, month) =
+        let openings =
+            Dates.In (Month(year, month))
+            |> Seq.map (fun d -> 
+                {
+                    Date = d.ToString "yyyy.MM.dd"
+                    Seats = seatingCapacity })
+            |> Seq.toArray
+
+        this.Request.CreateResponse(
+            HttpStatusCode.OK,
+            { Openings = openings })
+
+    member this.Get (year, month, day) =
+        let openings =
+            Dates.In (Day(year, month, day))
+            |> Seq.map (fun d -> 
+                {
+                    Date = d.ToString "yyyy.MM.dd"
+                    Seats = seatingCapacity })
+            |> Seq.toArray
+
+        this.Request.CreateResponse(
+            HttpStatusCode.OK,
+            { Openings = openings })

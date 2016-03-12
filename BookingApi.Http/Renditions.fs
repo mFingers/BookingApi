@@ -31,3 +31,14 @@ type AtomLinkRendition = {
 type LinkListRendition = {
     Links:AtomLinkRendition array
 }
+
+[<CLIMutable>]
+type OpeningsRendition = {
+    Date:string
+    Seats:int
+}
+
+[<CLIMutable>]
+type AvailabilityRendition = {
+    Openings: OpeningsRendition array
+}

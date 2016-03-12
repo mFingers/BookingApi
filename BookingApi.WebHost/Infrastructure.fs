@@ -65,4 +65,5 @@ type Global() =
             (reservations |> ToReservations)
             (notifications |> ToNotifications)
             (Observer.Create agent.Post)
+            seatingCapacity
             GlobalConfiguration.Configuration

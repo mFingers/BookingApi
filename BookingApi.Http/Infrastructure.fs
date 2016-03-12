@@ -11,11 +11,12 @@ open Controllers
 open Reservations
 open Notifications
 
-type CompositionRoot (reservations:IReservations, notifications:INotifications, reservationRequestObserver) =
+type CompositionRoot (reservations:IReservations, notifications:INotifications, reservationRequestObserver, seatingCapacity) =
     interface IHttpControllerActivator with
         member this.Create(request, controllerDescriptor, controllerType) =
             if controllerType = typeof<HomeController> then
                 new HomeController() :> IHttpController
+
             elif controllerType = typeof<ReservationsController> then
                 let c = new ReservationsController()
                 c
@@ -23,8 +24,13 @@ type CompositionRoot (reservations:IReservations, notifications:INotifications, 
                 |> request.RegisterForDispose
 
                 c :> IHttpController
+
             elif controllerType = typeof<NotificationsController> then
                 new NotificationsController(notifications) :> IHttpController
+
+            elif controllerType = typeof<AvailabilityController> then
+                new AvailabilityController(seatingCapacity) :> IHttpController
+
             else
                 raise
                 <| ArgumentException(
@@ -32,12 +38,27 @@ type CompositionRoot (reservations:IReservations, notifications:INotifications, 
 
 type HttpRouteDefaults = { Controller:string; Id:obj }
 
-let ConfigureServices reservations notifications reservationRequestObserver (config:HttpConfiguration) =
+let ConfigureServices reservations notifications reservationRequestObserver seatingCapacity (config:HttpConfiguration) =
     config.Services.Replace(
         typeof<IHttpControllerActivator>,
-        CompositionRoot (reservations, notifications, reservationRequestObserver))
+        CompositionRoot (reservations, notifications, reservationRequestObserver, seatingCapacity))
 
 let ConfigureRoutes (config:HttpConfiguration) =
+    config.Routes.MapHttpRoute(
+        "AvailabilityYear",
+        "availability/{year}",
+        { Controller = "Availability"; Id = RouteParameter.Optional } ) |> ignore
+
+    config.Routes.MapHttpRoute(
+        "AvailabilityMonth",
+        "availability/{year}/{month}",
+        { Controller = "Availability"; Id = RouteParameter.Optional } ) |> ignore
+
+    config.Routes.MapHttpRoute(
+        "AvailabilityDay",
+        "availability/{year}/{month}/{day}",
+        { Controller = "Availability"; Id = RouteParameter.Optional } ) |> ignore
+
     config.Routes.MapHttpRoute(
         "DefaultAPI",
         "{controller}/{id}",
@@ -47,7 +68,7 @@ let ConfigureFormatting (config:HttpConfiguration) =
     config.Formatters.JsonFormatter.SerializerSettings.ContractResolver <-
         Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
 
-let Configure reservations notifications reservationRequestObserver config =
+let Configure reservations notifications reservationRequestObserver seatingCapacity config =
     ConfigureRoutes config
-    ConfigureServices reservations notifications reservationRequestObserver config
+    ConfigureServices reservations notifications reservationRequestObserver seatingCapacity config
     ConfigureFormatting config
