@@ -31,7 +31,13 @@ type ReservationsController () =
 
         subject.OnNext cmd
 
-        new HttpResponseMessage(HttpStatusCode.Accepted)
+        this.Request.CreateResponse(
+            HttpStatusCode.Accepted,
+            {
+                Links =
+                    [| {
+                            Rel = "http://localhost:53743/notifications"
+                            Href = "notifications/" + cmd.Id.ToString("N") } |] })
 
     interface IObservable<Envelope<MakeReservation>> with
         member this.Subscribe observer = subject.Subscribe observer
