@@ -39,3 +39,24 @@ type ReservationsController () =
     override this.Dispose disposing =
         if disposing then subject.Dispose()
         base.Dispose disposing
+
+
+type NotificationsController (notifications:Notifications.INotifications) =
+    inherit ApiController()
+
+    member this.Get id =
+        let toRendition (n:Envelope<Notification>) = {
+            About = n.Item.About.ToString()
+            Type = n.Item.Type
+            Message = n.Item.Message
+        }
+
+        let matches =
+            notifications
+            |> Notifications.About id
+            |> Seq.map toRendition
+            |> Seq.toArray
+
+        this.Request.CreateResponse(HttpStatusCode.OK, {Notifications = matches })
+
+    member this.Notifications = notifications

@@ -22,6 +22,8 @@ type CompositionRoot (reservations:IReservations, reservationRequestObserver) =
                 |> request.RegisterForDispose
 
                 c :> IHttpController
+            elif controllerType = typeof<NotificationsController> then
+                new NotificationsController([] |> Notifications.ToNotifications) :> IHttpController
             else
                 raise
                 <| ArgumentException(
