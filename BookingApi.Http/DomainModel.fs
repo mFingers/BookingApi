@@ -45,3 +45,22 @@ module Reservations =
             }
             |> EnvelopWithDefaults
             |> Some
+
+
+module Notifications =
+    type INotifications =
+        inherit seq<Envelope<Notification>>
+        abstract About : Guid -> seq<Envelope<Notification>>
+
+    type NotificationsInMemory(notifications:seq<Envelope<Notification>>) =
+        interface INotifications with
+            member x.About id = 
+                notifications |> Seq.filter (fun n -> n.Item.About = id)
+
+            member x.GetEnumerator() = notifications.GetEnumerator()
+            member x.GetEnumerator() =
+                (x :> Envelope<Notification> seq).GetEnumerator() :> System.Collections.IEnumerator
+
+    let ToNotifications notifications = NotificationsInMemory(notifications)
+
+    let About id (notifications: INotifications) = notifications.About id
