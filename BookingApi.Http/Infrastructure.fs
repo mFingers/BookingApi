@@ -24,12 +24,12 @@ type CompositionRoot (reservations:IReservations, notifications:INotifications, 
                 |> request.RegisterForDispose
 
                 c :> IHttpController
-
+                 
             elif controllerType = typeof<NotificationsController> then
                 new NotificationsController(notifications) :> IHttpController
 
             elif controllerType = typeof<AvailabilityController> then
-                new AvailabilityController(seatingCapacity) :> IHttpController
+                new AvailabilityController(reservations, seatingCapacity) :> IHttpController
 
             else
                 raise
