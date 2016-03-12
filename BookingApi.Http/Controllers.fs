@@ -72,12 +72,14 @@ type AvailabilityController(seatingCapacity:int) =
     inherit ApiController()
 
     member this.Get year =
+        let now = DateTimeOffset.Now
+
         let openings =
             Dates.In (Year year)
             |> Seq.map (fun d -> 
                 {
                     Date = d.ToString "yyyy.MM.dd"
-                    Seats = seatingCapacity })
+                    Seats = if d < now.Date then 0 else seatingCapacity })
             |> Seq.toArray
 
         this.Request.CreateResponse(
@@ -85,12 +87,14 @@ type AvailabilityController(seatingCapacity:int) =
             { Openings = openings })
 
     member this.Get (year, month) =
+        let now = DateTimeOffset.Now
+
         let openings =
             Dates.In (Month(year, month))
             |> Seq.map (fun d -> 
                 {
                     Date = d.ToString "yyyy.MM.dd"
-                    Seats = seatingCapacity })
+                    Seats = if d < now.Date then 0 else seatingCapacity })
             |> Seq.toArray
 
         this.Request.CreateResponse(
@@ -98,12 +102,15 @@ type AvailabilityController(seatingCapacity:int) =
             { Openings = openings })
 
     member this.Get (year, month, day) =
+        let now = DateTimeOffset.Now
+        let requestedDate = DateTimeOffset(DateTime(year, month, day), now.Offset)
+
         let openings =
             Dates.In (Day(year, month, day))
             |> Seq.map (fun d -> 
                 {
                     Date = d.ToString "yyyy.MM.dd"
-                    Seats = seatingCapacity })
+                    Seats = if requestedDate.Date < now.Date then 0 else seatingCapacity })
             |> Seq.toArray
 
         this.Request.CreateResponse(
