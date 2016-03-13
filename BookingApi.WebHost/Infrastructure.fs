@@ -64,6 +64,53 @@ type ReservationsInFiles(directory:DirectoryInfo) =
         member x.GetEnumerator() =
             (x :> seq<Envelope<Reservation>>).GetEnumerator() :> System.Collections.IEnumerator
 
+type NotificationsInFiles(directory:DirectoryInfo) =
+    let toNotification (f:FileInfo) =
+        let json = File.ReadAllText(f.FullName)
+        JsonConvert.DeserializeObject<Envelope<BookingApi.Http.Notification>>(json)
+
+    let toEnumerator(s:seq<'T>) = s.GetEnumerator()
+
+    let getContainingDirectory id =
+        Path.Combine(directory.FullName, id.ToString())
+
+    let appendPath p2 p1 = Path.Combine(p1, p2)
+
+    let getJsonFiles (dir:DirectoryInfo) =
+        if Directory.Exists(dir.FullName)
+            then dir.EnumerateFiles("*.json", SearchOption.AllDirectories)
+            else Seq.empty<FileInfo>
+
+    member this.Write (notification:Envelope<BookingApi.Http.Notification>) =
+        let withExtension extension path = Path.ChangeExtension(path, extension)
+        let directoryName = notification.Item.About |> getContainingDirectory
+        let filename =
+            directoryName
+            |> appendPath (notification.Id.ToString())
+            |> withExtension "json"
+
+        let json = JsonConvert.SerializeObject(notification)
+        Directory.CreateDirectory(directoryName) |> ignore
+        File.WriteAllText(filename, json)
+
+    interface INotifications with
+        member x.About id =
+            id
+            |> getContainingDirectory
+            |> DirectoryInfo
+            |> getJsonFiles
+            |> Seq.map toNotification
+
+        member x.GetEnumerator() =
+            directory
+            |> getJsonFiles
+            |> Seq.map toNotification
+            |> toEnumerator
+
+        member x.GetEnumerator() =
+            (x :> seq<Envelope<BookingApi.Http.Notification>>).GetEnumerator() :> System.Collections.IEnumerator
+
+
 type Agent<'T> = Microsoft.FSharp.Control.MailboxProcessor<'T>
 
 type Global() =
@@ -71,10 +118,14 @@ type Global() =
 
     member this.Application_Start (sender:obj) (e:EventArgs) =
         let seatingCapacity = 10
-        let dir = DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/ReservationStore"))
-        let reservations = ReservationsInFiles(dir)
+        
+        let reservations =
+            ReservationsInFiles(
+                DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/ReservationStore")))
 
-        let notifications = ConcurrentBag<Envelope<BookingApi.Http.Notification>>()
+        let notifications =
+            NotificationsInFiles(
+                DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/NotificationStore")))
 
         let reservationSubject = new Subjects.Subject<Envelope<Reservation>>()
         reservationSubject.Subscribe reservations.Write |> ignore
@@ -82,8 +133,7 @@ type Global() =
         let notificationSubject = new Subjects.Subject<BookingApi.Http.Notification>()
         notificationSubject
         |> Observable.map EnvelopWithDefaults
-        |> Observable.subscribe notifications.Add
-        |> ignore
+        |> Observable.subscribe notifications.Write |> ignore
 
         let agent = new Agent<Envelope<MakeReservation>>(fun inbox ->
             let rec loop () =
@@ -117,7 +167,7 @@ type Global() =
 
         Configure
             reservations
-            (notifications |> ToNotifications)
+            notifications
             (Observer.Create agent.Post)
             seatingCapacity
             GlobalConfiguration.Configuration
