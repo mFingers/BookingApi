@@ -223,6 +223,5 @@ FakesAssemblies/
 _Pvt_Extensions
 
 # Application-specific
-src/ABCS.Web/app
-src/ABCS.Web/assets
-src/**/*.fsx
+BookingApi.WebHost/NotificationStore
+BookingApi.WebHost/ReservationStore

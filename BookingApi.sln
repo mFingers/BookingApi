@@ -9,6 +9,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BookingApi.Http", "BookingA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4603AD36-B49B-4AC5-8B43-702C1CA48989}"
 	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
 		build.fsx = build.fsx
 		paket.dependencies = paket.dependencies
 		readme.md = readme.md
