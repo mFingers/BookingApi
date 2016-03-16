@@ -188,6 +188,37 @@ type ReservationsInAzureBlobs(blobContainer: CloudBlobContainer) =
         member this.GetEnumerator() =
             (this :> seq<Envelope<Reservation>>).GetEnumerator() :> System.Collections.IEnumerator
 
+type NotificationsInAzureBlobs(blobContainer: CloudBlobContainer) =
+    let toNotification (b: CloudBlockBlob) =
+        let json = b.DownloadText()
+        JsonConvert.DeserializeObject<Envelope<BookingApi.Http.Notification>> json
+
+    let toEnumerator (s:seq<'T>) = s.GetEnumerator()
+
+    member this.Write notification =
+        let id = sprintf "%O/%O.json" notification.Item.About notification.Id
+        let b = blobContainer.GetBlockBlobReference id
+        
+        let json = JsonConvert.SerializeObject notification
+        b.Properties.ContentType <- "application/json"
+        b.UploadText json
+
+    interface INotifications with
+        member this.About id = 
+            blobContainer.ListBlobs(id.ToString(), true)
+            |> Seq.cast<CloudBlockBlob>
+            |> Seq.map toNotification
+
+        member this.GetEnumerator() =
+            blobContainer.ListBlobs(useFlatBlobListing = true)
+            |> Seq.cast<CloudBlockBlob>
+            |> Seq.map toNotification
+            |> toEnumerator
+
+        member this.GetEnumerator() =
+            (this :> seq<Envelope<BookingApi.Http.Notification>>).GetEnumerator() :> System.Collections.IEnumerator
+            
+
 module AzureQ =
     let enqueue (q:Queue.CloudQueue) msg =
         let json = JsonConvert.SerializeObject msg
@@ -224,9 +255,19 @@ type Global() =
 
         let reservations = ReservationsInAzureBlobs(reservationsContainer)
 
-        let notifications =
-            NotificationsInFiles(
-                DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/NotificationStore")))
+        let nq =
+            storageAccount
+                .CreateCloudQueueClient()
+                .GetQueueReference("notifications")
+        nq.CreateIfNotExists() |> ignore
+
+        let notificationsContainer =
+            storageAccount
+                .CreateCloudBlobClient()
+                .GetContainerReference("notifications")
+        notificationsContainer.CreateIfNotExists() |> ignore
+
+        let notifications = NotificationsInAzureBlobs(notificationsContainer)
 
         let reservationSubject = new Subjects.Subject<Envelope<Reservation> * Guid * AccessCondition>()
         reservationSubject.Subscribe reservations.Write |> ignore
@@ -234,9 +275,9 @@ type Global() =
         let notificationSubject = new Subjects.Subject<BookingApi.Http.Notification>()
         notificationSubject
         |> Observable.map EnvelopWithDefaults
-        |> Observable.subscribe notifications.Write |> ignore
+        |> Observable.subscribe (AzureQ.enqueue nq) |> ignore 
 
-        let handle (msg: Queue.CloudQueueMessage) =
+        let handleR (msg: Queue.CloudQueueMessage) =
             let json = msg.AsString
             let cmd = JsonConvert.DeserializeObject<Envelope<MakeReservation>> json
             let condition = reservations.GetAccessCondition cmd.Item.Date
@@ -264,7 +305,20 @@ type Global() =
         System.Reactive.Linq.Observable.Interval(TimeSpan.FromSeconds 10.)
         |> Observable.map (fun _ -> AzureQ.dequeue rq)
         |> Observable.choose id
-        |> Observable.subscribeObserver (Observer.Create handle)
+        |> Observable.subscribeObserver (Observer.Create handleR)
+        |> ignore
+
+        let handleN (msg: Queue.CloudQueueMessage) =
+            let json = msg.AsString
+            let notification = JsonConvert.DeserializeObject<Envelope<BookingApi.Http.Notification>> json
+            notifications.Write notification
+
+            nq.DeleteMessage msg
+
+        System.Reactive.Linq.Observable.Interval(TimeSpan.FromSeconds 10.)
+        |> Observable.map (fun _ -> AzureQ.dequeue nq)
+        |> Observable.choose id
+        |> Observable.subscribeObserver (Observer.Create handleN)
         |> ignore
 
         Configure
