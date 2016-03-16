@@ -315,29 +315,34 @@ type Global() =
         |> Observable.subscribe (AzureQ.enqueue nq) |> ignore 
 
         let handleR (msg: Queue.CloudQueueMessage) =
-            let json = msg.AsString
-            let cmd = JsonConvert.DeserializeObject<Envelope<MakeReservation>> json
-            let condition = reservations.GetAccessCondition cmd.Item.Date
-            let newReservations = Handle seatingCapacity reservations cmd
-            match newReservations with
-                | Some (r) ->
-                    reservationSubject.OnNext (r, cmd.Id, condition)
-                    notificationSubject.OnNext
-                        {
-                            About = cmd.Id
-                            Type = "Success"
-                            Message = sprintf "Your reservation for %s was completed.  We look forward to seeing you."
-                                        (cmd.Item.Date.ToString "yyyy.MM.dd")
-                        }
-                | None     ->
-                    notificationSubject.OnNext
-                        {
-                            About = cmd.Id
-                            Type = "Failure"
-                            Message = sprintf "We regret to inform you that your reservation for %s could not be completed, because we are already fully booked."
-                                        (cmd.Item.Date.ToString "yyyy.MM.dd")
-                        }
-            rq.DeleteMessage msg
+            //naive error handling.  Messages will be replayed indefinitely
+            //a better strategy would be to count the retries, then move to
+            //an error queue
+            try
+                let json = msg.AsString
+                let cmd = JsonConvert.DeserializeObject<Envelope<MakeReservation>> json
+                let condition = reservations.GetAccessCondition cmd.Item.Date
+                let newReservations = Handle seatingCapacity reservations cmd
+                match newReservations with
+                    | Some (r) ->
+                        reservationSubject.OnNext (r, cmd.Id, condition)
+                        notificationSubject.OnNext
+                            {
+                                About = cmd.Id
+                                Type = "Success"
+                                Message = sprintf "Your reservation for %s was completed.  We look forward to seeing you."
+                                            (cmd.Item.Date.ToString "yyyy.MM.dd")
+                            }
+                    | None     ->
+                        notificationSubject.OnNext
+                            {
+                                About = cmd.Id
+                                Type = "Failure"
+                                Message = sprintf "We regret to inform you that your reservation for %s could not be completed, because we are already fully booked."
+                                            (cmd.Item.Date.ToString "yyyy.MM.dd")
+                            }
+                rq.DeleteMessage msg
+            with e -> errorHandler.Write e
 
         System.Reactive.Linq.Observable.Interval(TimeSpan.FromSeconds 10.)
         |> Observable.map (fun _ -> AzureQ.dequeue rq)
@@ -346,11 +351,13 @@ type Global() =
         |> ignore
 
         let handleN (msg: Queue.CloudQueueMessage) =
-            let json = msg.AsString
-            let notification = JsonConvert.DeserializeObject<Envelope<BookingApi.Http.Notification>> json
-            notifications.Write notification
+            try
+                let json = msg.AsString
+                let notification = JsonConvert.DeserializeObject<Envelope<BookingApi.Http.Notification>> json
+                notifications.Write notification
 
-            nq.DeleteMessage msg
+                nq.DeleteMessage msg
+            with e -> errorHandler.Write e
 
         System.Reactive.Linq.Observable.Interval(TimeSpan.FromSeconds 10.)
         |> Observable.map (fun _ -> AzureQ.dequeue nq)
