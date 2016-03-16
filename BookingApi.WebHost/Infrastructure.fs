@@ -16,6 +16,30 @@ open Microsoft.WindowsAzure.Storage.Blob
 open Microsoft.WindowsAzure.Storage
 open Microsoft.Azure
 
+type ErrorsInAzureBlobs(blobContainer:CloudBlobContainer) =
+    let getId (d: DateTime) =
+        String.Join(
+            "/",
+            [
+                d.Year.ToString()
+                d.Month.ToString()
+                d.Day.ToString()
+                Guid.NewGuid().ToString()
+            ])
+            |> sprintf "%s.txt"
+
+    member this.Write e =
+        let id = getId DateTimeOffset.UtcNow.Date
+        let b = blobContainer.GetBlockBlobReference id
+        b.Properties.ContentType <- "text/plain; charset=uft-8"
+        b.UploadText(e.ToString())
+
+    interface System.Web.Http.Filters.IExceptionFilter with
+        member this.AllowMultiple = true
+        member this.ExecuteExceptionFilterAsync(actionExecutedContext, cancellationtoken) =
+            System.Threading.Tasks.Task.Factory.StartNew(
+                fun () -> this.Write actionExecutedContext.Exception )
+
 type ReservationsInFiles(directory:DirectoryInfo) =
     let toReservation (f:FileInfo) =
         let json = File.ReadAllText(f.FullName)
@@ -245,6 +269,14 @@ type Global() =
         let storageAccount = 
             CloudConfigurationManager.GetSetting "storageConnectionString"
             |> CloudStorageAccount.Parse
+
+        let errorContainer =
+            storageAccount
+                .CreateCloudBlobClient()
+                .GetContainerReference("errors")
+        errorContainer.CreateIfNotExists() |> ignore
+        let errorHandler = ErrorsInAzureBlobs(errorContainer)
+        GlobalConfiguration.Configuration.Filters.Add errorHandler
 
         let rq =
             storageAccount
