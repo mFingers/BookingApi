@@ -14,6 +14,7 @@ open FSharp.Control.Reactive.Observable
 open Newtonsoft.Json
 open Microsoft.WindowsAzure.Storage.Blob
 open Microsoft.WindowsAzure.Storage
+open Microsoft.Azure
 
 type ReservationsInFiles(directory:DirectoryInfo) =
     let toReservation (f:FileInfo) =
@@ -204,16 +205,30 @@ type Global() =
 
     member this.Application_Start (sender:obj) (e:EventArgs) =
         let seatingCapacity = 10
-        
-        let reservations =
-            ReservationsInFiles(
-                DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/ReservationStore")))
+
+        let storageAccount = 
+            CloudConfigurationManager.GetSetting "storageConnectionString"
+            |> CloudStorageAccount.Parse
+
+        let rq =
+            storageAccount
+                .CreateCloudQueueClient()
+                .GetQueueReference("reservations")
+        rq.CreateIfNotExists() |> ignore
+
+        let reservationsContainer =
+            storageAccount
+                .CreateCloudBlobClient()
+                .GetContainerReference("reservations")
+        reservationsContainer.CreateIfNotExists() |> ignore
+
+        let reservations = ReservationsInAzureBlobs(reservationsContainer)
 
         let notifications =
             NotificationsInFiles(
                 DirectoryInfo(System.Web.HttpContext.Current.Server.MapPath("~/NotificationStore")))
 
-        let reservationSubject = new Subjects.Subject<Envelope<Reservation>>()
+        let reservationSubject = new Subjects.Subject<Envelope<Reservation> * Guid * AccessCondition>()
         reservationSubject.Subscribe reservations.Write |> ignore
 
         let notificationSubject = new Subjects.Subject<BookingApi.Http.Notification>()
@@ -221,39 +236,40 @@ type Global() =
         |> Observable.map EnvelopWithDefaults
         |> Observable.subscribe notifications.Write |> ignore
 
-        let agent = new Agent<Envelope<MakeReservation>>(fun inbox ->
-            let rec loop () =
-                async { 
-                    let! cmd = inbox.Receive()
-                    let handle = Handle seatingCapacity reservations
-                    let newReservations = handle cmd
-                    match newReservations with
-                    | Some (r) ->
-                        reservationSubject.OnNext r
-                        notificationSubject.OnNext
-                            {
-                                About = cmd.Id
-                                Type = "Success"
-                                Message = sprintf "Your reservation for %s was completed.  We look forward to seeing you."
-                                            (cmd.Item.Date.ToString "yyyy.MM.dd")
-                            }
-                    | None     ->
-                        notificationSubject.OnNext
-                            {
-                                About = cmd.Id
-                                Type = "Failure"
-                                Message = sprintf "We regret to inform you that your reservation for %s could not be completed, because we are already fully booked."
-                                            (cmd.Item.Date.ToString "yyyy.MM.dd")
-                            }
-                    return! loop()
-                }
-            loop())
-    
-        do agent.Start()
+        let handle (msg: Queue.CloudQueueMessage) =
+            let json = msg.AsString
+            let cmd = JsonConvert.DeserializeObject<Envelope<MakeReservation>> json
+            let condition = reservations.GetAccessCondition cmd.Item.Date
+            let newReservations = Handle seatingCapacity reservations cmd
+            match newReservations with
+                | Some (r) ->
+                    reservationSubject.OnNext (r, cmd.Id, condition)
+                    notificationSubject.OnNext
+                        {
+                            About = cmd.Id
+                            Type = "Success"
+                            Message = sprintf "Your reservation for %s was completed.  We look forward to seeing you."
+                                        (cmd.Item.Date.ToString "yyyy.MM.dd")
+                        }
+                | None     ->
+                    notificationSubject.OnNext
+                        {
+                            About = cmd.Id
+                            Type = "Failure"
+                            Message = sprintf "We regret to inform you that your reservation for %s could not be completed, because we are already fully booked."
+                                        (cmd.Item.Date.ToString "yyyy.MM.dd")
+                        }
+            rq.DeleteMessage msg
+
+        System.Reactive.Linq.Observable.Interval(TimeSpan.FromSeconds 10.)
+        |> Observable.map (fun _ -> AzureQ.dequeue rq)
+        |> Observable.choose id
+        |> Observable.subscribeObserver (Observer.Create handle)
+        |> ignore
 
         Configure
             reservations
             notifications
-            (Observer.Create agent.Post)
+            (Observer.Create (AzureQ.enqueue rq))
             seatingCapacity
             GlobalConfiguration.Configuration

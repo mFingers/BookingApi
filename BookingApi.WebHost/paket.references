@@ -1,3 +1,4 @@
 Microsoft.AspNet.WebApi.WebHost
 FSharp.Control.Reactive
 WindowsAzure.Storage
+Microsoft.WindowsAzure.ConfigurationManager

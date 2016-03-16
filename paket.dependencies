@@ -5,3 +5,4 @@ nuget Microsoft.AspNet.WebApi.WebHost
 nuget Rx-Main
 nuget FSharp.Control.Reactive
 nuget WindowsAzure.Storage
+nuget Microsoft.WindowsAzure.ConfigurationManager

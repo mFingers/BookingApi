@@ -28,6 +28,7 @@ NUGET
     Microsoft.Net.Http (2.2.29) - framework: portable-wp80+win+net45+wp81+wpa81
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
+    Microsoft.WindowsAzure.ConfigurationManager (3.2.1)
     Newtonsoft.Json (8.0.2) - framework: >= net40, portable-wp80+win+net45+wp81+wpa81, winv4.5, wpv8.1, wpv8.0
     Rx-Core (2.2.5)
       Rx-Interfaces (>= 2.2.5)
