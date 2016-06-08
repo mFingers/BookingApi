@@ -47,6 +47,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Messages.fs" />
     <Compile Include="DomainModel.fs" />
+    <Compile Include="InMemoryStore.fs" />
     <Compile Include="Renditions.fs" />
     <Compile Include="Controllers.fs" />
     <Compile Include="Infrastructure.fs" />

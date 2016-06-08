@@ -13,9 +13,10 @@ From "A Functional Architecure with F#" course.
 - Create build.cmd file
 - Create build.fsx file
 
-## Create the web project
+## Create the web host project
 - Create F# class library
-- Add the Project Type Guids to the fsproj file:  `<ProjectTypeGuids>{E53F8FEA-EAE0-44A6-8774-FFD645390401};{349C5851-65DF-11DA-9384-00065B846F21};{F2A71F9B-5D33-465A-A702-920D77279786}</ProjectTypeGuids>`
+- Add the Project Type Guids to the fsproj file:
+  `<ProjectTypeGuids>{E53F8FEA-EAE0-44A6-8774-FFD645390401};{349C5851-65DF-11DA-9384-00065B846F21};{F2A71F9B-5D33-465A-A702-920D77279786}</ProjectTypeGuids>`
 - Install Microsoft.AspNet.WebApi.WebHost
 - Add reference to System.Web
 - Add web.config, with binding redirects for Json.Net
@@ -38,7 +39,7 @@ From "A Functional Architecure with F#" course.
 ## Separate API concerns from hosting concerns
 - Create F# class library
 - Install Microsoft.AspNet.WebApi.WebHost
-- Add reference to System.Web
+- Add reference to System.Web (because you will be using types from that assembly)
 - Move infrastructure code that should be owned by the API out of the host
 - Create a controller to prove it works
 - Setup JSON serialization defaults
@@ -70,3 +71,9 @@ From "A Functional Architecure with F#" course.
 ## Publish success/failure
 1. Create a type for the notification
 1. notificationSubject - what's that about?  Need Rx help
+
+## Unit Testing
+1. Install NUnit
+1. Install Unquote
+1. From package manager console, NUnit3TestAdapter
+  - paket won't run the powershell script that hooks it into the IDE

@@ -1,5 +1,4 @@
 ﻿namespace BookingApi.WebHost
-
 open System
 open System.IO
 open System.Web.Http
